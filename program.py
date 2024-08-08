@@ -26,7 +26,6 @@ def decrypt_data(encrypted_data, key):
     decrypted_data = cipher_suite.decrypt(encrypted_data)
     return decrypted_data.decode()
 
-
 class MonitorHandler(FileSystemEventHandler):
     def __init__(self, file_hashes, key, callback):
         self.file_hashes = file_hashes
@@ -35,12 +34,16 @@ class MonitorHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if not event.is_directory:
-            file_path = event.src_path
+            # Normalizar o caminho do arquivo
+            file_path = os.path.normpath(event.src_path)
             new_hash = generate_hash(file_path)
-            original_hash = decrypt_data(self.file_hashes[file_path], self.key)
 
-            if new_hash != original_hash:
-                self.callback(file_path)
+            # Verificar se o arquivo está no dicionário de hashes
+            if file_path in self.file_hashes:
+                original_hash = decrypt_data(self.file_hashes[file_path], self.key)
+
+                if new_hash != original_hash:
+                    self.callback(file_path)
 
 class IntegrityMonitorApp:
     def __init__(self, root):
@@ -64,9 +67,11 @@ class IntegrityMonitorApp:
     def select_files(self):
         files = filedialog.askopenfilenames(title="Selecione os arquivos para monitorar")
         for file in files:
-            file_hash = generate_hash(file)
+            # Normalizar o caminho do arquivo
+            file_path = os.path.normpath(file)
+            file_hash = generate_hash(file_path)
             encrypted_hash = encrypt_data(file_hash, self.key)
-            self.file_hashes[file] = encrypted_hash
+            self.file_hashes[file_path] = encrypted_hash
 
     def start_monitoring(self):
         if not self.file_hashes:
